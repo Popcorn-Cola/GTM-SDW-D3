@@ -34,7 +34,7 @@ out_size = params.out_size
 a = params.a
 b = params.b
 c = params.c
-n_timesteps = params.n_timesteps
+d = params.d
 
 HIFIGAN_CONFIG = './checkpts/hifigan-config.json'
 HIFIGAN_CHECKPT = './checkpts/hifigan.pt'
@@ -75,6 +75,9 @@ if __name__ == '__main__':
                         help='location of file to contain validation text')
     parser.add_argument('-m', '--evaluation_mode', type=str, required=False, default='WAVPDFMEL_ENCODER',
                         help='WAVPDFMEL  or Valid_LOSSES or WAVPDFMEL_ENCODER')
+    parser.add_argument('-n', '--n_timesteps', type=int, required=False, default=100,
+                        help='n_timesteps during inference')
+
     args = parser.parse_args()
 
     gt_dir = args.gt_dir
@@ -82,6 +85,7 @@ if __name__ == '__main__':
     checkpoint_dir = args.checkpoint_dir
     epoch_interval = args.epoch_interval
     evaluation_mode = args.evaluation_mode
+    n_timesteps = args.n_timesteps
     # get cmu dictionary
     # importcmudict
     cmu = cmudict.CMUDict('./resources/cmu_dictionary')
@@ -101,7 +105,7 @@ if __name__ == '__main__':
                         params.n_enc_channels, params.filter_channels,
                         params.filter_channels_dp, params.n_heads, params.n_enc_layers,
                         params.enc_kernel, params.enc_dropout, params.window_size,
-                        params.n_feats, params.dec_dim, params.beta_min, params.beta_max, params.pe_scale, params.epsilon, params.a, params.b, params.c, params.n_timesteps).cuda()
+                        params.n_feats, params.dec_dim, params.beta_min, params.beta_max, params.pe_scale, params.epsilon, params.a, params.b, params.c, params.d, n_timesteps).cuda()
 
     print('build Valid batch...')
     # idx = np.random.choice(list(range(len(test_dataset))), size=params.test_size, replace=False)
@@ -162,6 +166,9 @@ if __name__ == '__main__':
                 print(f'Doing the {index}st epoch')
                 if not os.path.exists(f'{cvt_dir}/Epoch_{index}'):
                     os.makedirs(f'{cvt_dir}/Epoch_{index}')
+                if not os.path.exists(f'{cvt_dir}/Epoch_{index}/step_{n_timesteps}'):
+                    os.makedirs(f'{cvt_dir}/Epoch_{index}/step_{n_timesteps}')
+
                 with torch.no_grad():
                     for i, text in enumerate(texts):
                             # convert word to phonemes:
@@ -172,10 +179,10 @@ if __name__ == '__main__':
                             y_mel.append(y_dec) # [put all mel tensor from text file into a list]
 
                             audio = (vocoder.forward(y_dec).cpu().squeeze().clamp(-1, 1).numpy() * 32768).astype(np.int16)
-                            write(f'{cvt_dir}/Epoch_{index}/output_{i}.wav', 22050, audio)
-                            pt_to_pdf(y_dec.cpu().squeeze(0), f'{cvt_dir}/Epoch_{index}/dec_{i}.pdf')
-                            pt_to_pdf(y_enc.cpu().squeeze(0), f'{cvt_dir}/Epoch_{index}/enc_{i}.pdf')
-                save_mel_spectrograms_to_file(y_mel, f'{cvt_dir}/Epoch_{index}')
+                            write(f'{cvt_dir}/Epoch_{index}/step_{n_timesteps}/output_{i}.wav', 22050, audio)
+                            pt_to_pdf(y_dec.cpu().squeeze(0), f'{cvt_dir}/Epoch_{index}/step_{n_timesteps}/dec_{i}.pdf')
+                            pt_to_pdf(y_enc.cpu().squeeze(0), f'{cvt_dir}/Epoch_{index}/step_{n_timesteps}/enc_{i}.pdf')
+                save_mel_spectrograms_to_file(y_mel, f'{cvt_dir}/Epoch_{index}/step_{n_timesteps}')
 
         elif evaluation_mode == 'WAVPDFMEL_ENCODER':
             for i in range(0,len(checkpoint_files),epoch_interval):
