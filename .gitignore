@@ -1,0 +1,9 @@
+logs/
+out/
+eval/
+eval_useless/
+test/
+*.pt
+*.png
+*.wav
+trainingoutput.txt
